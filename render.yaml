@@ -91,7 +91,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     schedule: "30 22 * * *"   # UTC — runs at 4:00 AM IST
-    command: python -m app.scheduler.collect_job
+    startCommand: python -m app.scheduler.collect_job
 
     envVars:
       - key: PYTHON_VERSION
@@ -126,7 +126,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     schedule: "30 0 * * *"   # UTC — runs at 6:00 AM IST
-    command: python -m app.scheduler.send_digest_job
+    startCommand: python -m app.scheduler.send_digest_job
 
     envVars:
       - key: PYTHON_VERSION
