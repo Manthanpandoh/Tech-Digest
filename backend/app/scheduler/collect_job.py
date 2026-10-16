@@ -45,7 +45,8 @@ def main() -> int:
 
     ensure_indexes()
 
-    result = run_daily_pipeline()
+    force = os.getenv("FORCE_REBUILD", "").lower() in ("true", "1") or "--force" in sys.argv
+    result = run_daily_pipeline(force=force)
 
     logger.info("Job result:\n%s", json.dumps(
         {k: str(v) if not isinstance(v, (int, float, bool, list, str, type(None))) else v

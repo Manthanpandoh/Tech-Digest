@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     WHATSAPP_LOG_COLLECTION: str = "whatsapp_log"
 
     # ── OpenRouter / LLM ─────────────────────────────────────────────────────
-    OPENROUTER_API_KEY: str = Field(..., description="OpenRouter API key")
+    OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API key")
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     MODEL_NAME: str = "google/gemini-2.5-flash"
     LLM_TEMPERATURE_SUMMARY: float = 0.4

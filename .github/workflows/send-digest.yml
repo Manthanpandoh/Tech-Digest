@@ -1,0 +1,82 @@
+name: Daily WhatsApp Digest Dispatch
+
+on:
+  schedule:
+    # 6:00 AM IST daily = 00:30 UTC
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: techpulse-scheduled-workflows
+  cancel-in-progress: false
+
+jobs:
+  dispatch-whatsapp-digest:
+    name: Dispatch WhatsApp Daily Digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Authorize Runner IP on MongoDB Atlas
+        working-directory: backend
+        env:
+          ATLAS_PROJECT_ID: ${{ secrets.ATLAS_PROJECT_ID }}
+          ATLAS_PUBLIC_KEY: ${{ secrets.ATLAS_PUBLIC_KEY }}
+          ATLAS_PRIVATE_KEY: ${{ secrets.ATLAS_PRIVATE_KEY }}
+        run: |
+          python scripts/atlas_ip_manager.py add \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --duration 3600
+
+      - name: Verify Database Connectivity
+        working-directory: backend
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          python scripts/atlas_ip_manager.py verify --timeout 10
+
+      - name: Run WhatsApp Digest Delivery
+        working-directory: backend
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          DATABASE_NAME: ${{ vars.DATABASE_NAME || 'techpulse_ai' }}
+          USE_MOCK_DB: 'false'
+          TIMEZONE: ${{ vars.TIMEZONE || 'Asia/Kolkata' }}
+          WHATSAPP_DRY_RUN: 'true'
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN || '' }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID || '' }}
+          WHATSAPP_RECIPIENTS: ${{ secrets.WHATSAPP_RECIPIENTS || '' }}
+          WHATSAPP_API_VERSION: ${{ vars.WHATSAPP_API_VERSION || 'v22.0' }}
+        run: |
+          python -m app.scheduler.send_digest_job
+
+      - name: Revoke Temporary MongoDB Atlas Access
+        if: always()
+        working-directory: backend
+        env:
+          ATLAS_PROJECT_ID: ${{ secrets.ATLAS_PROJECT_ID }}
+          ATLAS_PUBLIC_KEY: ${{ secrets.ATLAS_PUBLIC_KEY }}
+          ATLAS_PRIVATE_KEY: ${{ secrets.ATLAS_PRIVATE_KEY }}
+        run: |
+          python scripts/atlas_ip_manager.py delete \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}"

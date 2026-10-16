@@ -2,11 +2,11 @@
 # Docs: https://render.com/docs/yaml-spec
 #
 # This file defines:
-#   1. The FastAPI web service
-#   2. Cron Job 1: news collection + digest generation (4:00 AM IST = 22:30 UTC)
-#   3. Cron Job 2: WhatsApp digest delivery (6:00 AM IST = 00:30 UTC)
+#   - The FastAPI web service (free tier)
+#   (Scheduled news collection and WhatsApp delivery are executed via
+#    GitHub Actions workflows in .github/workflows/ to keep Render free).
 #
-# Set the secret environment variables in the Render dashboard.
+# Set secret environment variables in the Render dashboard.
 # Never put real values in this file.
 
 services:
@@ -16,7 +16,7 @@ services:
     name: techpulse-ai-backend
     runtime: python
     region: singapore        # Closest to India for latency
-    plan: free               # Change to starter for always-on
+    plan: free               # Free tier web service
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
@@ -68,7 +68,7 @@ services:
       - key: WHATSAPP_API_VERSION
         value: v22.0
 
-      # ── Scheduling ──
+      # ── Scheduling / Timezone ──
       - key: TIMEZONE
         value: Asia/Kolkata
 
@@ -81,71 +81,3 @@ services:
 
       - key: TOP_ARTICLES_FOR_DIGEST
         value: "10"
-
-  # ── Cron Job 1: News Collection + Digest (4:00 AM IST = 22:30 UTC) ─────────
-  - type: cron
-    name: techpulse-collect-job
-    runtime: python
-    region: singapore
-    plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    schedule: "30 22 * * *"   # UTC — runs at 4:00 AM IST
-    startCommand: python -m app.scheduler.collect_job
-
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.10"
-      - key: MONGODB_URI
-        sync: false
-      - key: DATABASE_NAME
-        value: techpulse_ai
-      - key: USE_MOCK_DB
-        value: "false"
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: OPENROUTER_BASE_URL
-        value: https://openrouter.ai/api/v1
-      - key: MODEL_NAME
-        value: google/gemini-2.5-flash
-      - key: TIMEZONE
-        value: Asia/Kolkata
-      - key: MAX_ARTICLES_PER_FEED
-        value: "20"
-      - key: MAX_ARTICLES_TO_ANALYZE
-        value: "50"
-      - key: TOP_ARTICLES_FOR_DIGEST
-        value: "10"
-
-  # ── Cron Job 2: WhatsApp Digest Delivery (6:00 AM IST = 00:30 UTC) ─────────
-  - type: cron
-    name: techpulse-send-digest
-    runtime: python
-    region: singapore
-    plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    schedule: "30 0 * * *"   # UTC — runs at 6:00 AM IST
-    startCommand: python -m app.scheduler.send_digest_job
-
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.10"
-      - key: MONGODB_URI
-        sync: false
-      - key: DATABASE_NAME
-        value: techpulse_ai
-      - key: USE_MOCK_DB
-        value: "false"
-      - key: TIMEZONE
-        value: Asia/Kolkata
-      - key: WHATSAPP_DRY_RUN
-        value: "true"         # Change to "false" when ready
-      - key: WHATSAPP_ACCESS_TOKEN
-        sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
-        sync: false
-      - key: WHATSAPP_RECIPIENTS
-        sync: false
-      - key: WHATSAPP_API_VERSION
-        value: v22.0
