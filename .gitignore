@@ -1,0 +1,69 @@
+# ── Python ─────────────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Environment secrets — NEVER commit ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+*.env
+
+# ── Node.js ─────────────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Root-level stale scaffolding (real frontend is in frontend/) ─────────────
+/package.json
+/package-lock.json
+/venv/
+
+# ── IDE / Editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS-generated files ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/
+backend/logs/
+
+# ── Test / coverage artifacts ───────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.mypy_cache/
+
+# ── Temporary / generated files ─────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+*.txt
+scratch_*.py
+backend/scratch_*.py
+backend/run_pipeline_test.py
+backend/test_connection_only.py

@@ -1,0 +1,151 @@
+# render.yaml — TechPulse AI Render deployment configuration
+# Docs: https://render.com/docs/yaml-spec
+#
+# This file defines:
+#   1. The FastAPI web service
+#   2. Cron Job 1: news collection + digest generation (4:00 AM IST = 22:30 UTC)
+#   3. Cron Job 2: WhatsApp digest delivery (6:00 AM IST = 00:30 UTC)
+#
+# Set the secret environment variables in the Render dashboard.
+# Never put real values in this file.
+
+services:
+
+  # ── Web Service ─────────────────────────────────────────────────────────────
+  - type: web
+    name: techpulse-ai-backend
+    runtime: python
+    region: singapore        # Closest to India for latency
+    plan: free               # Change to starter for always-on
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+
+      # ── Required — set in Render dashboard ──
+      - key: MONGODB_URI
+        sync: false          # Mark as secret — enter value in dashboard
+
+      - key: DATABASE_NAME
+        value: techpulse_ai
+
+      - key: USE_MOCK_DB
+        value: "false"
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+
+      - key: MODEL_NAME
+        value: google/gemini-2.5-flash
+
+      - key: ADMIN_API_KEY
+        sync: false          # Generate a strong random secret
+
+      # ── CORS — update after frontend deployment ──
+      - key: FRONTEND_ORIGIN
+        value: http://localhost:5173   # Update to Vercel URL after deploy
+
+      # ── WhatsApp — safe defaults ──
+      - key: WHATSAPP_DRY_RUN
+        value: "true"        # Change to "false" only after full WA setup
+
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+
+      - key: WHATSAPP_RECIPIENTS
+        sync: false
+
+      - key: WHATSAPP_API_VERSION
+        value: v22.0
+
+      # ── Scheduling ──
+      - key: TIMEZONE
+        value: Asia/Kolkata
+
+      # ── Pipeline tuning ──
+      - key: MAX_ARTICLES_PER_FEED
+        value: "20"
+
+      - key: MAX_ARTICLES_TO_ANALYZE
+        value: "50"
+
+      - key: TOP_ARTICLES_FOR_DIGEST
+        value: "10"
+
+  # ── Cron Job 1: News Collection + Digest (4:00 AM IST = 22:30 UTC) ─────────
+  - type: cron
+    name: techpulse-collect-job
+    runtime: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    schedule: "30 22 * * *"   # UTC — runs at 4:00 AM IST
+    command: python -m app.scheduler.collect_job
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: MONGODB_URI
+        sync: false
+      - key: DATABASE_NAME
+        value: techpulse_ai
+      - key: USE_MOCK_DB
+        value: "false"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: MODEL_NAME
+        value: google/gemini-2.5-flash
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: MAX_ARTICLES_PER_FEED
+        value: "20"
+      - key: MAX_ARTICLES_TO_ANALYZE
+        value: "50"
+      - key: TOP_ARTICLES_FOR_DIGEST
+        value: "10"
+
+  # ── Cron Job 2: WhatsApp Digest Delivery (6:00 AM IST = 00:30 UTC) ─────────
+  - type: cron
+    name: techpulse-send-digest
+    runtime: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    schedule: "30 0 * * *"   # UTC — runs at 6:00 AM IST
+    command: python -m app.scheduler.send_digest_job
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: MONGODB_URI
+        sync: false
+      - key: DATABASE_NAME
+        value: techpulse_ai
+      - key: USE_MOCK_DB
+        value: "false"
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: WHATSAPP_DRY_RUN
+        value: "true"         # Change to "false" when ready
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_RECIPIENTS
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v22.0
